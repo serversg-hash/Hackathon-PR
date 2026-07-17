@@ -18,15 +18,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 3. DB connection middleware for Serverless environment
-app.use(async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (err) {
-    next(err);
-  }
-});
+// 3. DB connection middleware removed (handled in server.ts)
 
 // 4. Mount Backend API Routes
 app.use('/api/v1', apiRouter);

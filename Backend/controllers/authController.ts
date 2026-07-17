@@ -10,6 +10,24 @@ import bcrypt from 'bcryptjs';
 const JWT_SECRET = process.env.JWT_SECRET || 'maintainiq_default_secret_key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
+let transporter: nodemailer.Transporter | null = null;
+const otpRequestStore = new Map<string, number>(); // email -> last request timestamp
+
+function getTransporter() {
+  if (!transporter && process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: process.env.SMTP_PORT === '465',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS
+        }
+      });
+  }
+  return transporter;
+}
+
 export async function demoLogin(req: Request, res: Response) {
   try {
     const { role } = req.body;
@@ -316,21 +334,15 @@ async function sendOTPEmail(email: string, otp: string) {
     `
   };
 
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  const smtpTransporter = getTransporter();
+
+  if (smtpTransporter) {
     try {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: process.env.SMTP_PORT === '465',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
-      });
-      await transporter.sendMail(mailOptions);
+      await smtpTransporter.sendMail(mailOptions);
       console.log(`[SMTP] Successfully sent OTP email to ${email}`);
     } catch (smtpErr) {
       console.error('[SMTP] Error sending email via SMTP:', smtpErr);
+      throw smtpErr; // Rethrow to inform the caller
     }
   } else {
     console.log(`
@@ -352,6 +364,13 @@ export async function requestOTP(req: Request, res: Response) {
       return res.status(400).json({ error: 'Email address is required.' });
     }
     const sanitizedEmail = email.toLowerCase().trim();
+
+    // Simple rate limiting: 1 minute
+    const lastRequest = otpRequestStore.get(sanitizedEmail);
+    if (lastRequest && Date.now() - lastRequest < 60000) {
+        return res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
+    }
+    otpRequestStore.set(sanitizedEmail, Date.now());
 
     const user = await dbService.users.findOne({ email: sanitizedEmail });
     if (!user) {

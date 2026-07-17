@@ -5,9 +5,11 @@ dotenv.config();
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import app from './src/app';
+import app from './app';
+import { connectDB } from './config/db';
 
 async function startServer() {
+  await connectDB();
   const PORT = 3000;
 
   // Vite Middleware for Development / Static serving for Production
