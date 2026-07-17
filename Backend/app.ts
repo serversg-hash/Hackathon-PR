@@ -23,4 +23,10 @@ app.use(express.urlencoded({ extended: true }));
 // 4. Mount Backend API Routes
 app.use('/api/v1', apiRouter);
 
+// 5. Centralized Error Middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Unhandled Error:', err.stack);
+  res.status(500).json({ error: 'Internal Server Error', message: err.message });
+});
+
 export default app;
