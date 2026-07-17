@@ -10,6 +10,7 @@
     "dev:concurrently": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "tsx Backend/server.ts",
     "dev:client": "vite",
+    "build:frontend": "vite build",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },

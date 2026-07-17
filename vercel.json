@@ -6,9 +6,10 @@
       "use": "@vercel/node"
     },
     {
-      "src": "Frontend/index.html",
+      "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
+        "buildCommand": "npm run build:frontend",
         "distDir": "Frontend/dist"
       }
     }
